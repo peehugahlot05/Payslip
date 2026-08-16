@@ -1,12 +1,10 @@
 import webview
 import threading
-import subprocess
 import time
+import requests
 import os
 import sys
-import requests
 
-# Fix path for PyInstaller
 if getattr(sys, 'frozen', False):
     base_path = sys._MEIPASS
 else:
@@ -14,36 +12,34 @@ else:
 
 os.environ["FLASK_APP_BASE"] = base_path
 
-def start_flask():
-    print("Starting Flask server...")
-    subprocess.Popen([sys.executable, "app.py"], stdout=sys.stdout, stderr=sys.stderr)
+from app import app
 
-def wait_for_server(url, timeout=10):
-    """Wait for the Flask server to start up."""
+def start_flask():
+    # Crucial: use_reloader must be False in an EXE
+    app.run(port=5000, debug=False, use_reloader=False)
+
+def wait_for_server(url, timeout=15):
     start_time = time.time()
     while time.time() - start_time < timeout:
         try:
-            response = requests.get(url)
-            if response.status_code == 200:
+            # We use a head request to minimize data overhead
+            r = requests.head(url)
+            if r.status_code == 200:
                 return True
-        except requests.ConnectionError:
+        except:
             pass
         time.sleep(0.5)
     return False
 
-if __name__ == '__main__':
-    # Start Flask in a background thread
+if __name__ == "__main__":
     flask_thread = threading.Thread(target=start_flask)
     flask_thread.daemon = True
     flask_thread.start()
 
-    print("Waiting for Flask to start...")
     if wait_for_server("http://127.0.0.1:5000"):
-        print("Flask server is up. Launching UI.")
-        webview.create_window("Paysly Tool", "http://127.0.0.1:5000")
-        webview.start()
-    else:
-        print("Error: Flask server did not start.")
+        # Explicitly using 'edgechromium' prevents many string/byte encoding errors on Windows
+        webview.create_window("Paysly Tool", "http://127.0.0.1:5000", width=1100, height=700)
+        webview.start(gui='edgechromium')
 
 
 
