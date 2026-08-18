@@ -5,4 +5,5 @@ Jinja2
 WeasyPrint
 num2words
 gunicorn
+pikepdf
 
