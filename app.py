@@ -258,6 +258,16 @@ def index():
 
 
 
+@app.route('/download-template')
+
+def download_template():
+
+    template_path = os.path.join(base_path, "static", "downloads", "Paysly_Default_Template.xlsx")
+
+    return send_file(template_path, as_attachment=True, download_name="Payslip_Default_Template.xlsx")
+
+
+
 @app.route('/upload', methods=['POST'])
 
 def upload():
