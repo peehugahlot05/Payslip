@@ -9,7 +9,7 @@ Paysly is a Flask web application that automates the generation of professional 
 - Upload `.xlsx` or `.xls` consultant payout sheets
 - Automatically extract and map data fields
 - Generate professional PDF payslips using a Jinja2 HTML template
-- Password-protect each payslip PDF with the consultant's PAN
+- Password-protect each payslip PDF 
 - Background processing with a live progress page, so large workbooks (100s of consultants) don't time out
 - Download all payslips as a ZIP file
 - Downloadable default Excel template to get started quickly
