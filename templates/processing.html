@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Processing | Paysly</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .spinner {
+      border: 6px solid #dbeafe;
+      border-top: 6px solid #2563eb;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      animation: spin 1s linear infinite;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center px-4">
+  <div class="bg-white shadow-xl rounded-2xl p-8 max-w-lg w-full text-center">
+    <div class="mb-6">
+      <div class="w-16 h-16 bg-blue-100 rounded-full mx-auto flex items-center justify-center">
+        <div class="spinner"></div>
+      </div>
+    </div>
+    <h2 class="text-2xl font-bold text-gray-800 mb-2">Generating Payslips&hellip;</h2>
+    <p id="progress-text" class="text-gray-600 mb-4">Reading workbook&hellip;</p>
+    <div class="w-full bg-gray-200 rounded-full h-3 mb-2 overflow-hidden">
+      <div id="progress-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+    </div>
+    <p class="text-gray-400 text-xs mb-4">This can take a while for large workbooks. Feel free to leave this tab open.</p>
+    <p id="error-text" class="text-red-600 text-sm hidden"></p>
+  </div>
+
+  <script>
+    const jobId = {{ job_id | tojson }};
+
+    async function poll() {
+      try {
+        const res = await fetch(`/status/${jobId}`);
+        const data = await res.json();
+
+        if (data.status === "error") {
+          document.getElementById("progress-text").textContent = "Something went wrong.";
+          const errEl = document.getElementById("error-text");
+          errEl.textContent = data.error || "Unknown error.";
+          errEl.classList.remove("hidden");
+          return;
+        }
+
+        const total = data.total || 0;
+        const current = data.current || 0;
+        const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+        document.getElementById("progress-bar").style.width = pct + "%";
+        document.getElementById("progress-text").textContent =
+          total > 0 ? `Processed ${current} of ${total} employees…` : "Reading workbook…";
+
+        if (data.status === "done") {
+          window.location.href = `/success/${jobId}`;
+          return;
+        }
+
+        setTimeout(poll, 1500);
+      } catch (e) {
+        setTimeout(poll, 3000);
+      }
+    }
+
+    poll();
+  </script>
+</body>
+</html>
