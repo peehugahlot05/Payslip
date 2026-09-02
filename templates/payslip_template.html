@@ -10,10 +10,10 @@
             box-sizing: border-box;
         }
         body {
-            font-family: "Segoe UI", Tahoma, sans-serif;
+            font-family: "Noto Sans", "Segoe UI", Tahoma, sans-serif;
             font-size: 12px;
             margin: 0;
-            
+
         }
         table {
             border-collapse: collapse;
@@ -149,52 +149,15 @@
         <th class="left">Deductions</th>
         <th class="center">Amount</th>
     </tr>
-    {% if data.total_fee %}
+    {% for prow in data.payment_rows %}
     <tr>
-        <td>Fee</td>
-        <td class="right">{{ data.monthly_fee }}</td>
-        <td class="right">{{ data.total_fee }}</td>
-        <td>TDS</td>
-        <td class="right">{{ data.tds_10 }}</td>
+        <td>{{ prow.g_label }}</td>
+        <td class="right">{{ prow.g_master }}</td>
+        <td class="right">{{ prow.g_amount }}</td>
+        <td>{{ prow.d_label }}</td>
+        <td class="right">{{ prow.d_amount }}</td>
     </tr>
-    {% endif %}
-    <!-- Other Payments and Other Deduction -->
-    {% if data.bonus or data.other_deduction %}
-    <tr>
-        <td>Other Payments</td>
-        <td></td>
-        <td class="right">{% if data.bonus %}{{ data.bonus }}{% endif %}</td>
-        <td>Other Deduction</td>
-        <td class="right">{% if data.other_deduction %}{{ data.other_deduction }}{% endif %}</td>
-    </tr>
-    {% endif %}
-    <!-- Travel Reimbursement and Financial Pendency -->
-    {% if data.travel_reimbursement or data.financial_pendency %}
-    <tr>
-        <td>Travel Reimbursement</td>
-        <td></td>
-        <td class="right">{% if data.travel_reimbursement %}{{ data.travel_reimbursement }}{% endif %}</td>
-        <td>Financial Pendency</td>
-        <td class="right">{% if data.financial_pendency %}{{ data.financial_pendency }}{% endif %}</td>
-    </tr>
-    {% endif %}
-    <!-- New Area Allowance and Advance -->
-    {% if data.new_area_allowance or data.advance_recovery %}
-    <tr>
-        <td>New Area Allowance</td>
-        <td></td>
-        <td class="right">{% if data.new_area_allowance %}{{ data.new_area_allowance }}{% endif %}</td>
-        <td>Advance</td>
-        <td class="right">{% if data.advance_recovery %}{{ data.advance_recovery }}{% endif %}</td>
-    </tr>
-    {% endif %}
-
-    <tr>
-        <td>&nbsp;</td><td></td><td></td><td>Rent Deduction</td><td class="right">{{ data.rent_deduction }}</td>
-    </tr>
-    <tr>
-        <td>&nbsp;</td><td></td><td></td><td>Notice Recovery</td><td class="right">{{ data.notice_recovery }}</td>
-    </tr>
+    {% endfor %}
 
     <tr>
         <td class="bold">Total Payment</td>

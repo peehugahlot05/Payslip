@@ -2,6 +2,7 @@ import os
 import sys
 import threading
 import uuid
+from itertools import zip_longest
 
 import pikepdf
 import pandas as pd
@@ -36,6 +37,20 @@ def load_excel(file_path):
     return company_info, df
 
 
+def count_valid_vendors(df, columns, month_col, net_payment_col, total_payable_col, month_str, company_name, company_address):
+    count = 0
+    for _, row in df.iterrows():
+        filled_data = standardize(
+            row, columns, month_str, month_col, net_payment_col,
+            total_payable_col, company_name, company_address
+        )
+        vendor_name = str(filled_data['vendor_name']).strip()
+        if not vendor_name or vendor_name.lower() in ["total", "nan"]:
+            continue
+        count += 1
+    return count
+
+
 def find_column(columns, search):
     search = search.lower().replace(" ", "")
     for col in columns:
@@ -64,6 +79,58 @@ def net_payment_words_inr(amount):
         return f"Rupees {words} Only"
     except Exception:
         return "Rupees Zero Only"
+
+
+def is_zero_or_blank(val):
+    if val is None:
+        return True
+    s = str(val).strip()
+    if s == "" or s.lower() == "nan":
+        return True
+    try:
+        return float(s.replace(",", "")) == 0
+    except ValueError:
+        return False
+
+
+def build_payment_rows(monthly_fee, total_fee, tds_10, bonus, other_deduction,
+                        travel_reimbursement, financial_pendency,
+                        new_area_allowance, advance_recovery,
+                        rent_deduction, notice_recovery):
+    gross_items = []
+    if not is_zero_or_blank(total_fee):
+        gross_items.append(("Fee", monthly_fee, total_fee))
+    if not is_zero_or_blank(bonus):
+        gross_items.append(("Other Payments", "", bonus))
+    if not is_zero_or_blank(travel_reimbursement):
+        gross_items.append(("Travel Reimbursement", "", travel_reimbursement))
+    if not is_zero_or_blank(new_area_allowance):
+        gross_items.append(("New Area Allowance", "", new_area_allowance))
+
+    deduction_items = []
+    if not is_zero_or_blank(tds_10):
+        deduction_items.append(("TDS", tds_10))
+    if not is_zero_or_blank(other_deduction):
+        deduction_items.append(("Other Deduction", other_deduction))
+    if not is_zero_or_blank(financial_pendency):
+        deduction_items.append(("Financial Pendency", financial_pendency))
+    if not is_zero_or_blank(advance_recovery):
+        deduction_items.append(("Advance", advance_recovery))
+    if not is_zero_or_blank(rent_deduction):
+        deduction_items.append(("Rent Deduction", rent_deduction))
+    if not is_zero_or_blank(notice_recovery):
+        deduction_items.append(("Notice Recovery", notice_recovery))
+
+    rows = []
+    for g, d in zip_longest(gross_items, deduction_items):
+        rows.append({
+            "g_label": g[0] if g else "",
+            "g_master": g[1] if g else "",
+            "g_amount": g[2] if g else "",
+            "d_label": d[0] if d else "",
+            "d_amount": d[1] if d else "",
+        })
+    return rows
 
 
 def standardize(row, columns, month_str, month_col, net_payment_col, total_payable_col, company_name, company_address):
@@ -106,7 +173,14 @@ def standardize(row, columns, month_str, month_col, net_payment_col, total_payab
         "total_deductions": get_val("Total Deduction"),
         "net_payment": net_payment,
         "net_payment_words": net_payment_words_inr(net_payment),
-        "total_payable": total_payable
+        "total_payable": total_payable,
+        "payment_rows": build_payment_rows(
+            get_val("Monthly Fee"), total_fee, get_val("TDS@10%"),
+            get_val("Incentive/Bonus") or 0, get_val("Other Deduction") or 0,
+            get_val("Travel Reimbursement") or 0, get_val("Financial Pendency") or 0,
+            get_val("New Area Allowance") or 0, get_val("Advance Recovery") or 0,
+            get_val("Rent Deduction") or 0, get_val("Notice Recovery") or 0,
+        ),
     }
 
 
@@ -230,11 +304,16 @@ def upload():
     if len(month_str) > 2 and not month_str[-3] == "'":
         month_str = month_str[:-2] + "'" + month_str[-2:]
 
+    total_vendors = count_valid_vendors(
+        df, columns, month_col, net_payment_col, total_payable_col,
+        month_str, company_name, company_address
+    )
+
     with JOBS_LOCK:
         JOBS[job_id] = {
             "status": "processing",
             "current": 0,
-            "total": len(df),
+            "total": total_vendors,
             "zip_path": None,
             "error": None,
         }
